@@ -31,7 +31,6 @@ public:
     void Callback(const sensor_msgs::PointCloud2::ConstPtr &left_msg,
                   const sensor_msgs::PointCloud2::ConstPtr &right_msg);
                   
-	string base_link_frame_;
 private:
     message_filters::Subscriber<sensor_msgs::PointCloud2> *sub_left_cloud_;
     message_filters::Subscriber<sensor_msgs::PointCloud2> *sub_right_cloud_;
@@ -40,6 +39,19 @@ private:
     tf::TransformListener tf_listener_;
     ros::NodeHandle nh_;
     ros::Publisher pub_fusion_cloud_;
+    
+	string base_link_frame_;
+	
+//  //判断tf变换是否为单位矩阵
+//  bool isTfTransformIdentity(const tf::StampedTransform& transform)
+//  {
+//    auto R = transform.getBasis();
+//    auto T = transform.getOrigin();
+
+//    if(R == R.getIdentity() && T.getX() ==0 && T.getY() ==0 && T.getZ() ==0)
+//      return true;
+//    return false;
+//  }
 };
 
 DoubleLidarsFusion::DoubleLidarsFusion()
@@ -107,9 +119,9 @@ void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left
 		    isGetTransform = true;
 	  	}
 	  	
-	  	//是否需要点云坐标转换
+	  	//是否需要点云坐标转换,是单位矩阵就不需要在转换了
 		static bool isNeedTransform = true; 
-//		if(isNeedTransform && isTfTransformIdentity(transform))
+//		if(isNeedTransform) //&& isTfTransformIdentity(transform)
 //			isNeedTransform = false;
 
 		pcl::PointCloud<PointT>::Ptr transformed(new pcl::PointCloud<PointT>());
