@@ -2,7 +2,6 @@
 设备:ubuntu16.04
 ```
 sudo apt-get install ros-kinetic-pcl*
-
 ```
 ##### 1 说明
 * 1.话题消息：
