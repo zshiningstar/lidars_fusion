@@ -79,9 +79,10 @@ DoubleLidarsFusion::~DoubleLidarsFusion()
 }
 
 void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left_msg, const sensor_msgs::PointCloud2::ConstPtr &right_msg)
-{
+{	
 	static tf::StampedTransform trans_left_lidar_in_base, trans_right_lidar_in_base;
 	static bool left_transform_get=false, right_transform_get=false;
+	//如果没有得到左雷达相对于车体坐标系的转换
 	if(!left_transform_get)
 	{
 		if(!tf_listener_.canTransform(base_link_frame_, left_msg->header.frame_id, ros::Time(0))) 
@@ -95,7 +96,7 @@ void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left
 	    if(ok)
 	    	left_transform_get = true;
 	}
-	
+	//如果没有得到右雷达相对于车体坐标系的转换
 	if(!right_transform_get)
 	{
 		if(!tf_listener_.canTransform(base_link_frame_, right_msg->header.frame_id, ros::Time(0))) 
@@ -134,7 +135,7 @@ void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left
 	pcl::toROSMsg (*left_right_cloud, *fusion_cloud);
 	fusion_cloud->header.frame_id = base_link_frame_;
 	
-	//ros::Time::now()只对ros点云有效
+	//ros::Time::now()只对ros下的点云有效
 	fusion_cloud->header.stamp = ros::Time::now();
 	pub_fusion_cloud_.publish(fusion_cloud);
 	return;
