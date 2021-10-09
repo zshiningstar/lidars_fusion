@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include <ros/time.h>
+
 #include <string>
 
 #include <pcl_ros/transforms.h>
@@ -42,16 +44,16 @@ private:
     
 	string base_link_frame_;
 	
-//  //判断tf变换是否为单位矩阵
-//  bool isTfTransformIdentity(const tf::StampedTransform& transform)
-//  {
-//    auto R = transform.getBasis();
-//    auto T = transform.getOrigin();
+  //判断tf变换是否为单位矩阵
+  bool isTfTransformIdentity(const tf::StampedTransform& transform)
+  {
+    auto R = transform.getBasis();
+    auto T = transform.getOrigin();
 
-//    if(R == R.getIdentity() && T.getX() ==0 && T.getY() ==0 && T.getZ() ==0)
-//      return true;
-//    return false;
-//  }
+    if(R == R.getIdentity() && T.getX() ==0 && T.getY() ==0 && T.getZ() ==0)
+      return true;
+    return false;
+  }
 };
 
 DoubleLidarsFusion::DoubleLidarsFusion()
@@ -78,63 +80,64 @@ DoubleLidarsFusion::~DoubleLidarsFusion()
 
 void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left_msg, const sensor_msgs::PointCloud2::ConstPtr &right_msg)
 {
-	//终端打印先看时间戳
-    printf("left_msg stamp:%f\n", left_msg->header.stamp.toSec());
-    printf("right_msg stamp:%f\n", right_msg->header.stamp.toSec());
-    
-    //将ROS下的点云类型转换为pcl类型
+	static tf::StampedTransform trans_left_lidar_in_base, trans_right_lidar_in_base;
+	static bool left_transform_get=false, right_transform_get=false;
+	if(!left_transform_get)
+	{
+		if(!tf_listener_.canTransform(base_link_frame_, left_msg->header.frame_id, ros::Time(0))) 
+		{
+		    std::cerr << "failed to find transform between " << base_link_frame_ << " and " << left_msg->header.frame_id << std::endl;
+		    return;
+		}
+
+		bool ok = tf_listener_.waitForTransform(base_link_frame_, left_msg->header.frame_id, ros::Time(0), ros::Duration(2.0));
+	    tf_listener_.lookupTransform(base_link_frame_, left_msg->header.frame_id, ros::Time(0), trans_left_lidar_in_base);
+	    if(ok)
+	    	left_transform_get = true;
+	}
+	
+	if(!right_transform_get)
+	{
+		if(!tf_listener_.canTransform(base_link_frame_, right_msg->header.frame_id, ros::Time(0))) 
+		{
+		    std::cerr << "failed to find transform between " << base_link_frame_ << " and " << right_msg->header.frame_id << std::endl;
+		    return;
+  		}
+
+		bool ok = tf_listener_.waitForTransform(base_link_frame_, right_msg->header.frame_id, ros::Time(0), ros::Duration(2.0));
+	    tf_listener_.lookupTransform(base_link_frame_, left_msg->header.frame_id, ros::Time(0), trans_left_lidar_in_base);
+	    if(ok)
+	    	right_transform_get = true;
+	}
+	
+	if(!left_transform_get || !right_transform_get) return;
+	
+	//将ROS下的点云类型转换为pcl类型
 	pcl::PointCloud<PointT>::Ptr left_local_laser(new pcl::PointCloud<PointT>());
 	pcl::fromROSMsg(*left_msg, *left_local_laser);
 	
 	pcl::PointCloud<PointT>::Ptr right_local_laser(new pcl::PointCloud<PointT>());
 	pcl::fromROSMsg(*right_msg, *right_local_laser);
 	
-	//点云为空直接退出
-    if(left_local_laser->empty() || right_local_laser->empty())
-		return;
-		
-	//点云数据相加
-    pcl::PointCloud<PointT>::Ptr fusion_cloud(new pcl::PointCloud<PointT>());
-    *fusion_cloud = *left_local_laser + *right_local_laser;
-    
-    fusion_cloud->header.frame_id = "fusion_link_frame";
-    //将所有的点云坐标系赋值为fusion_link_frame?
+	pcl::PointCloud<PointT>::Ptr left_transformed(new pcl::PointCloud<PointT>());
+	pcl::PointCloud<PointT>::Ptr right_transformed(new pcl::PointCloud<PointT>());
 
-    // 如果定义了基坐标，将点云转换到基坐标
-    if(!base_link_frame_.empty()) 
-    {
-		if(!tf_listener_.canTransform(base_link_frame_, fusion_cloud->header.frame_id, ros::Time(0))) 
-		{
-		    std::cerr << "failed to find transform between " << base_link_frame_ << " and " << fusion_cloud->header.frame_id << std::endl;
-		    return;
-  		}
-
-		//是否已经获得坐标转换(获取融合后的点云坐标到车辆坐标转换)
-		static bool isGetTransform = false; 
-		static tf::StampedTransform transform;
-		if(!isGetTransform)
-		{
-			tf_listener_.waitForTransform(base_link_frame_, fusion_cloud->header.frame_id, ros::Time(0), ros::Duration(2.0));
-		    tf_listener_.lookupTransform(base_link_frame_, fusion_cloud->header.frame_id, ros::Time(0), transform);
-		    isGetTransform = true;
-	  	}
-	  	
-	  	//是否需要点云坐标转换,是单位矩阵就不需要在转换了
-		static bool isNeedTransform = true; 
-//		if(isNeedTransform) //&& isTfTransformIdentity(transform)
-//			isNeedTransform = false;
-
-		pcl::PointCloud<PointT>::Ptr transformed(new pcl::PointCloud<PointT>());
-
-		if(isNeedTransform)
-		{
-		    pcl_ros::transformPointCloud(*fusion_cloud, *transformed, transform);
-			transformed->header.frame_id = base_link_frame_;
-		    transformed->header.stamp = fusion_cloud->header.stamp;
-		    fusion_cloud = transformed;
-		}
-		pub_fusion_cloud_.publish(fusion_cloud);
-    }
+	pcl_ros::transformPointCloud(*left_local_laser, *left_transformed, trans_left_lidar_in_base);
+	pcl_ros::transformPointCloud(*right_local_laser, *right_transformed, trans_right_lidar_in_base);
+     
+	pcl::PointCloud<PointT>::Ptr left_right_cloud(new pcl::PointCloud<PointT>());
+	*left_right_cloud =  *left_transformed + *right_transformed;
+	
+	//将pcl类型点云转换为ROS下类型点云
+	sensor_msgs::PointCloud2::Ptr fusion_cloud(new sensor_msgs::PointCloud2);
+	
+	pcl::toROSMsg (*left_right_cloud, *fusion_cloud);
+	fusion_cloud->header.frame_id = base_link_frame_;
+	
+	//ros::Time::now()只对ros点云有效
+	fusion_cloud->header.stamp = ros::Time::now();
+	pub_fusion_cloud_.publish(fusion_cloud);
+	return;
 }
 
 int main(int argc, char **argv)
