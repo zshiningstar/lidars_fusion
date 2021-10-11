@@ -27,12 +27,11 @@ catkin_package(
 )
 
 include_directories(
-# include
+ include
   ${catkin_INCLUDE_DIRS}
-#  /usr/include/pcl-1.7/pcl
 )
 
-add_executable(${PROJECT_NAME}_node src/double_lidars_fusion.cpp)
+add_executable(${PROJECT_NAME}_node src/double_lidars_fusion_main.cpp)
                                     
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})

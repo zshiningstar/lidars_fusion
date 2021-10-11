@@ -140,11 +140,3 @@ void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left
 	pub_fusion_cloud_.publish(fusion_cloud);
 	return;
 }
-
-int main(int argc, char **argv)
-{
-    ros::init(argc, argv, "DoubleLidarsFusion_node");
-    DoubleLidarsFusion DoubleLidarsFusion;
-    ros::spin();
-    return 0;
-}
