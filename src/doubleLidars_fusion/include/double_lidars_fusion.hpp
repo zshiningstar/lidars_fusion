@@ -43,6 +43,8 @@ private:
     ros::Publisher pub_fusion_cloud_;
     
 	string base_link_frame_;
+	string left_lidar_points_;
+	string right_lidar_points_;
 	
   //判断tf变换是否为单位矩阵
   bool isTfTransformIdentity(const tf::StampedTransform& transform)
@@ -58,9 +60,14 @@ private:
 
 DoubleLidarsFusion::DoubleLidarsFusion()
 {
+    left_lidar_points_ = nh_.param<std::string>("left_lidar_topic", "/left_lidar_topic");
+    right_lidar_points_ = nh_.param<std::string>("right_lidar_topic", "right_lidar_topic");
+    
+    base_link_frame_ = nh_.param<std::string>("base_link_frame", "vehicle_link");
 	//时间同步
-	sub_left_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, "/left/rslidar_points", 1, ros::TransportHints().tcpNoDelay());
-	sub_right_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, "/right/rslidar_points", 1, ros::TransportHints().tcpNoDelay());
+	sub_left_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, left_lidar_points_, 1, ros::TransportHints().tcpNoDelay());
+	sub_right_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, right_lidar_points_, 1, ros::TransportHints().tcpNoDelay());
+	
 	m_sync_ = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *sub_left_cloud_, *sub_right_cloud_);
 	//只有两个话题消息同时到达时才会进入回调函数
 	m_sync_->registerCallback(boost::bind(&DoubleLidarsFusion::Callback, this, _1, _2));
@@ -68,7 +75,6 @@ DoubleLidarsFusion::DoubleLidarsFusion()
 	//发布融合后的点云
 	pub_fusion_cloud_ = nh_.advertise<sensor_msgs::PointCloud2>("/fusion_topic", 10);
 	
-    base_link_frame_ = nh_.param<std::string>("base_link_frame", "vehicle_link");
 }
 
 DoubleLidarsFusion::~DoubleLidarsFusion()

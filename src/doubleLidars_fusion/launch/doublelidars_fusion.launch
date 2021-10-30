@@ -3,6 +3,11 @@
 <launch>
   <!-- transformation between lidar and base_link -->
   <param name="base_link_frame" value="vehicle_link" />
+  
+  <param name="left_lidar_topic" value="/left/rslidar_points" />
+  <param name="right_lidar_topic" value="/right/rslidar_points" />
+  
+  
   <node pkg="tf" type="static_transform_publisher" name="name1" args="0.9 0 0 -0.67 0 0 vehicle_link left_lidar 100" />
   
   <node pkg="tf" type="static_transform_publisher" name="name2" args="-0.9 0.5 0 -2.531 0 0 vehicle_link right_lidar 100" />
