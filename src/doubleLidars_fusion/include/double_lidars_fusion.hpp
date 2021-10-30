@@ -59,8 +59,8 @@ private:
 DoubleLidarsFusion::DoubleLidarsFusion()
 {
 	//时间同步
-	sub_left_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, "/cloud1", 1, ros::TransportHints().tcpNoDelay());
-	sub_right_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, "/cloud2", 1, ros::TransportHints().tcpNoDelay());
+	sub_left_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, "/left/rslidar_points", 1, ros::TransportHints().tcpNoDelay());
+	sub_right_cloud_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, "/right/rslidar_points", 1, ros::TransportHints().tcpNoDelay());
 	m_sync_ = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *sub_left_cloud_, *sub_right_cloud_);
 	//只有两个话题消息同时到达时才会进入回调函数
 	m_sync_->registerCallback(boost::bind(&DoubleLidarsFusion::Callback, this, _1, _2));
@@ -68,7 +68,7 @@ DoubleLidarsFusion::DoubleLidarsFusion()
 	//发布融合后的点云
 	pub_fusion_cloud_ = nh_.advertise<sensor_msgs::PointCloud2>("/fusion_topic", 10);
 	
-    base_link_frame_ = nh_.param<std::string>("base_link_frame", "");
+    base_link_frame_ = nh_.param<std::string>("base_link_frame", "vehicle_link");
 }
 
 DoubleLidarsFusion::~DoubleLidarsFusion()
@@ -80,6 +80,7 @@ DoubleLidarsFusion::~DoubleLidarsFusion()
 
 void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left_msg, const sensor_msgs::PointCloud2::ConstPtr &right_msg)
 {	
+//    ROS_ERROR("%s",base_link_frame_.c_str());
 	static tf::StampedTransform trans_left_lidar_in_base, trans_right_lidar_in_base;
 	static bool left_transform_get=false, right_transform_get=false;
 	//如果没有得到左雷达相对于车体坐标系的转换
@@ -106,7 +107,7 @@ void DoubleLidarsFusion::Callback(const sensor_msgs::PointCloud2::ConstPtr &left
   		}
 
 		bool ok = tf_listener_.waitForTransform(base_link_frame_, right_msg->header.frame_id, ros::Time(0), ros::Duration(2.0));
-	    tf_listener_.lookupTransform(base_link_frame_, left_msg->header.frame_id, ros::Time(0), trans_left_lidar_in_base);
+	    tf_listener_.lookupTransform(base_link_frame_, right_msg->header.frame_id, ros::Time(0), trans_right_lidar_in_base);
 	    if(ok)
 	    	right_transform_get = true;
 	}

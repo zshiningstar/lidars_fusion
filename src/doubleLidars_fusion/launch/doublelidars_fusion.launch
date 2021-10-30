@@ -1,14 +1,15 @@
 <!-- -->
 
-<!--<arg name="points_topic" default="/velodyne_points" />-->
-
+<launch>
   <!-- transformation between lidar and base_link -->
-  <node pkg="tf" type="static_transform_publisher" name="lidar_fusion2base_publisher" args="0 0 0 0 0 0 base_link_frame left_link_frame 10" />
+<param name="base_link_frame" value="vehicle_link" />
+  <node pkg="tf" type="static_transform_publisher" name="name1" args="0.9 0 0 -0.67 0 0 vehicle_link left_lidar 100" />
   
-  <node pkg="tf" type="static_transform_publisher" name="lidar_fusion2base_publisher" args="0 0 0 0 0 0 base_link_frame right_link_frame 10" />
+  <node pkg="tf" type="static_transform_publisher" name="name2" args="-0.9 0.5 0 -2.531 0 0 vehicle_link right_lidar 100" />
+
   
   <node pkg="doubleLidars_fusion" type="doubleLidars_fusion_node" name="doubleLidars_fusion_node">
-  	<!-- 车体坐标系 -->
-  	<param name="base_link_frame" value="vehicle_link" />
-  
+
   </node>
+  
+</launch>
