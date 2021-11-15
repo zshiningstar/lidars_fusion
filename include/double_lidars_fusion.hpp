@@ -73,7 +73,8 @@ DoubleLidarsFusion::DoubleLidarsFusion()
 	m_sync_->registerCallback(boost::bind(&DoubleLidarsFusion::Callback, this, _1, _2));
 	
 	//发布融合后的点云
-	pub_fusion_cloud_ = nh_.advertise<sensor_msgs::PointCloud2>("/fusion_topic", 10);
+	std::string fusion_topic_ = nh_.param<std::string>("fusion_topic", "/fusion_topic");
+	pub_fusion_cloud_ = nh_.advertise<sensor_msgs::PointCloud2>("fusion_topic_", 10);
 	
 }
 
